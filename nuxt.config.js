@@ -40,7 +40,15 @@ export default {
     // https://go.nuxtjs.dev/vuetify
     '@nuxtjs/vuetify'
   ],
-
+  // firestore: {
+  //   memoryOnly: false, // default
+  //   chunkName: process.env.NODE_ENV !== 'production' ? 'firebase-auth' : '[id]', // default
+  //   enablePersistence: true,
+  //   emulatorPort: 8080,
+  //   emulatorHost: 'localhost',
+  //   settings: {
+  //   }
+  // },
   // Modules: https://go.nuxtjs.dev/config-modules
   modules: [
     [
@@ -57,7 +65,12 @@ export default {
           measurementId: "G-FGP2MZR8K3"
         },
         services: {
-          firestore: true,
+          firestore: {
+            settings: {
+              host: 'localhost:8080',
+              ssl: false
+            }
+          },
           auth: true // Just as example. Can be any other service.
         }
       }
@@ -86,10 +99,10 @@ export default {
   build: {
     // extend(config, ctx) {
     //   config.module.rules.push({
-    //     enforce: 'pre',
-    //     test: /\.(js|vue)$/,
-    //     loader: 'eslint-loader',
-    //     exclude: /(node_modules)/,
+    //      enforce: 'pre',
+    //      test: /\.(js|vue)$/,
+    //      loader: 'eslint-loader',
+    //      exclude: /(node_modules)/,
     //     options: {
     //       fix: true
     //     }

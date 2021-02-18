@@ -1,10 +1,6 @@
 <template>
   <v-row justify="center" align="center">
-    <v-text-field
-      v-model="pattern"
-      @change="patternSearch"
-    >
-    </v-text-field>
+    <v-text-field v-model="pattern" @change="patternSearch" />
     <v-col
       cols="12"
       sm="6"
@@ -92,6 +88,13 @@
         </v-card-text>
       </material-card>
     </v-col>
+    <material-alert
+      color="info"
+      dark
+      dismissible
+    >
+      This is a notification with close button and icon and have many lines. You can see that the icon and the close button are always vertically aligned. This is a beautiful notification. So you don't have to worry about the style.
+    </material-alert>
   </v-row>
 </template>
 
@@ -100,10 +103,12 @@
 // import VuetifyLogo from '~/components/VuetifyLogo.vue'
 import MaterialCard from '~/components/base/MaterialCard'
 import MaterialStatsCard from '~/components/base/MaterialStatsCard'
+import MaterialAlert from '~/components/base/MaterialAlert'
 export default {
   components: {
     MaterialCard,
-    MaterialStatsCard
+    MaterialStatsCard,
+    MaterialAlert
   },
   data () {
     return {
@@ -179,15 +184,9 @@ export default {
   },
   mounted () {
     // console.log(this.$fire)
-    this.init()
+    // this.init()
   },
   methods: {
-    async init () {
-      const res = await this.$fire.firestore.collection('-video_meta').get()
-      res.forEach((item) => {
-        console.log(item.data())
-      })
-    },
     searchPhraseByFirstChar (item) {
       this.vocabCollection = []
       const keyword = item.split('')[0]

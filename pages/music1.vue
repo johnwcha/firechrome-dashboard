@@ -2,7 +2,7 @@
   <v-layout row justify-center align-center>
     <v-flex>
       <v-row>
-        <v-col cols="7" class="ml-5">
+        <v-col cols="6" class="ml-5">
           <div class="iframe_div">
             <youtube
               ref="youtube"
@@ -11,13 +11,24 @@
               :resize="true"
               :fit-parent="true"
             />
-            <v-text-field v-model="vid" @change="parseURL" />
-            <p> JSON.stringify(this.videoCollection) </p>
+            <v-text-field v-model="vid" label="video URL" @change="parseURL" />
+            <v-card outlined>
+              <v-card-actions>
+                <v-text-field v-model="lineCount" class="mr-2" label="lineCount" />
+                <v-btn outlined small dark class="info" @click="getCurrentTime">
+                  get time
+                </v-btn>
+                <v-btn outlined small class="pink--text" @click="getJSON">
+                  get JSON
+                </v-btn>
+                <v-text-field v-model="txtJSON" class="ml-2" label="JSON" />
+              </v-card-actions>
+            </v-card>
             <v-textarea
               v-model="taVocab"
               outlined
-              label="paste JSON Object here"
-              @change="parseJson"
+              label="paste subtitles line by line here"
+              @change="parseText"
             />
           </div>
         </v-col>
@@ -26,6 +37,12 @@
             <template #default>
               <thead>
                 <tr>
+                  <th
+                    style="width: 15px;"
+                    class="text-left"
+                  >
+                    #
+                  </th>
                   <th class="text-left">
                     Time
                   </th>
@@ -39,6 +56,11 @@
                   v-for="(item, i) in videoCollection"
                   :key="i"
                 >
+                  <td
+                    style="width: 15px;"
+                  >
+                    {{ i }}
+                  </td>
                   <td style="font-weight: bolds; width: 140px;">
                     <v-text-field v-model="item.id" @change="adjustTime(item, i)" />
                   </td>
@@ -56,7 +78,7 @@
           >
             {{ indexCount }} characters indexed ...
           </material-alert>
-          <v-btn :disabled="videoCollection.length==0 || vid==''" outlined small @click="save_db">
+          <v-btn :disabled="videoCollection.length==0 || vid==''" outlined class="pink--text" small @click="save_db">
             save to DB
           </v-btn>
           <v-card outlined>
@@ -113,6 +135,8 @@ export default {
   },
   data () {
     return {
+      lineCount: 0,
+      txtJSON: '',
       stats_obj: null,
       unique_char: [],
       total_char: '',
@@ -158,6 +182,18 @@ export default {
     }).catch((err) => { console.log(err.message) })
   },
   methods: {
+    getJSON () {
+      this.txtJSON = JSON.stringify(this.videoCollection)
+    },
+    getCurrentTime () {
+      this.$refs.youtube.player.getCurrentTime().then((value) => {
+        console.log(value, this.lineCount)
+        // console.log(new Date((value.toFixed(1)-.6) * 1000).toISOString().substr(11, 12))
+        this.videoCollection[this.lineCount].id = new Date((value.toFixed(1) - 0.6) * 1000).toISOString().substr(11, 12)
+        this.videoCollection[this.lineCount].start = Number.parseFloat(value).toFixed(3) - 0.6
+        this.lineCount++
+      })
+    },
     update_stats () {
       // video_count +1, total_char, video_length, unique_char[]
       const vCount = this.stats_obj.video_count + 1
@@ -205,7 +241,7 @@ export default {
     adjustTime (item, index) {
       console.log(item)
       const time = item.id.split(':')
-      this.videoCollection[index].start = parseInt(time[0]) * 60 * 60 + parseInt(time[1]) * 60 + parseFloat(time[2])
+      this.videoCollection[index].start = parseInt(time[0]) * 60 * 60 + parseInt(time[1]) * 60 + parseFloat(time[2].toFixed(3))
     },
     playSegment (obj, i) {
       this.counter = i
@@ -217,8 +253,12 @@ export default {
       this.videoId = temp[0].split('?v=')[1]
       console.log(temp[0].split('?v=')[1])
     },
-    parseJson () {
-      this.videoCollection = JSON.parse(this.taVocab)
+    parseText () {
+      const lines = this.taVocab.split('\n')
+      lines.forEach((line) => {
+        const obj = { id: '', sub: line, start: '' }
+        this.videoCollection.push(obj)
+      })
     }
   }
 }

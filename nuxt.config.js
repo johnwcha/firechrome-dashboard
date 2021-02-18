@@ -97,16 +97,11 @@ export default {
 
   // Build Configuration: https://go.nuxtjs.dev/config-build
   build: {
-    // extend(config, ctx) {
-    //   config.module.rules.push({
-    //      enforce: 'pre',
-    //      test: /\.(js|vue)$/,
-    //      loader: 'eslint-loader',
-    //      exclude: /(node_modules)/,
-    //     options: {
-    //       fix: true
-    //     }
-    //   })
-    // }
+    // dev notes about opencc-js
+    // use @ 0.2.1 version and comment out line 1
+    // if typeof window ..., just require('node-fetch')
+    // 為 converting to simp gives an extra char, \r
+    // do this: this.subsimp = this.subsimp.replace('\r', '')
+    // 
   }
 }

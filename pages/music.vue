@@ -12,7 +12,20 @@
               :fit-parent="true"
             />
             <v-text-field v-model="vid" @change="parseURL" />
-            <p> JSON.stringify(this.videoCollection) </p>
+            <v-simple-table dense>
+              <thead>
+                <tr>
+                  <th class="text-left">
+                    JSON.stringify(this.videoCollection)
+                  </th>
+                  <th class="text-left">
+                    <v-btn outlined small @click="saveDoc">
+                      save doc
+                    </v-btn>
+                  </th>
+                </tr>
+              </thead>
+            </v-simple-table>
             <v-textarea
               v-model="taVocab"
               outlined
@@ -30,7 +43,7 @@
                     Time
                   </th>
                   <th class="text-left">
-                    Lyrics
+                    Subtitle
                   </th>
                 </tr>
               </thead>
@@ -57,7 +70,7 @@
             {{ indexCount }} characters indexed ...
           </material-alert>
           <v-btn :disabled="videoCollection.length==0 || vid==''" outlined small @click="save_db">
-            save to DB
+            start indexing
           </v-btn>
           <v-card outlined>
             <v-card-actions>
@@ -74,7 +87,7 @@
             <v-card-actions>
               <v-text-field v-model="duration" label="duration" />
               <v-btn outlined small :disabled="duration==='' || title===''" @click="save_meta">
-                save video meta
+                save meta & doc
               </v-btn>
             </v-card-actions>
             <v-card-actions>
@@ -136,7 +149,7 @@ export default {
       vocab: '',
       videoId: 'qKTAf5hSyzY',
       repeatwords: [],
-      skipwords: ['、', '“', '”', '-', '_', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '哦', '喲', '呢', '啊', '呀', '呐', '唉', '哎', '了', '我', '', '，', '。', '！', '？', '《', '》', ',', '.', '?', ' ', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'],
+      skipwords: ['：', '、', '"', '\'', '-', '_', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '哦', '喲', '呢', '啊', '呀', '呐', '唉', '哎', '了', '我', ' ', '，', '。', '！', '？', '《', '》', ',', '.', '?', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'],
       playerVars: {
         autoplay: 0,
         controls: 1,
@@ -150,21 +163,20 @@ export default {
     }
   },
   mounted () {
-    this.$fire.firestore.collection('-video_stats').doc('stats_doc').get().then((doc) => {
-      console.log(doc.data())
-      this.stats_obj = doc.data()
-      this.unique_char = doc.data().unique_char
-      // total_char, unique_char [], video_count, video_length
-    }).catch((err) => { console.log(err.message) })
+    this.init()
   },
   methods: {
+    async saveDoc () {
+      const res = await this.$fire.firestore.collection('-video_coll').doc(this.videoId).set({ sub: this.videoCollection })
+      console.warn(res)
+    },
     update_stats () {
       // video_count +1, total_char, video_length, unique_char[]
       const vCount = this.stats_obj.video_count + 1
-      const tChar = this.stats_obj.total_char + Number(this.total_char)
+      const tChar = this.stats_obj.total_char + Number(this.indexCount)
       const vLength = this.stats_obj.video_length + Number(this.video_length)
       const obj = { video_count: vCount, total_char: tChar, video_length: vLength, unique_char: this.unique_char }
-      console.log(obj)
+      // console.log(obj)
       this.$fire.firestore.collection('-video_stats').doc('stats_doc').set(obj).then(() => {
         console.log('stats update success')
       }).catch((err) => { console.log(err.message) })
@@ -174,6 +186,7 @@ export default {
       this.$fire.firestore.collection('-video_meta').doc(this.videoId).set(obj).then(() => {
         console.log('meta saved success')
       }).catch((err) => { console.log(err.message) })
+      this.saveDoc()
     },
     save_db () {
       this.videoCollection.forEach((obj) => {
@@ -203,9 +216,10 @@ export default {
       }).catch((err) => { console.log(err.message) })
     },
     adjustTime (item, index) {
-      console.log(item)
+      // console.log(item)
       const time = item.id.split(':')
       this.videoCollection[index].start = parseInt(time[0]) * 60 * 60 + parseInt(time[1]) * 60 + parseFloat(time[2])
+      this.taVocab = JSON.stringify(this.videoCollection)
     },
     playSegment (obj, i) {
       this.counter = i
@@ -215,10 +229,19 @@ export default {
     parseURL () {
       const temp = this.vid.split('&')
       this.videoId = temp[0].split('?v=')[1]
-      console.log(temp[0].split('?v=')[1])
+      // console.log(temp[0].split('?v=')[1])
     },
     parseJson () {
       this.videoCollection = JSON.parse(this.taVocab)
+    },
+    async init () {
+      const res = await this.$fire.firestore.collection('-video_stats').doc('stats_doc').get()
+      // console.log(res.data())
+      this.stats_obj = res.data()
+      this.total_char = res.data().total_char.toString()
+      this.unique_char = res.data().unique_char
+      this.video_count = res.data().video_count.toString()
+      this.video_length = (res.data().video_length / 60).toFixed(2).toString()
     }
   }
 }

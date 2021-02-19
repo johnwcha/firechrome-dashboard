@@ -92,7 +92,7 @@ export default {
       const OpenCC = require('opencc-js')
       const convert = await OpenCC.Converter('tw', 'cn')
       this.subsimp = convert(str)
-      console.log(this.subsimp)
+      // console.log(this.subsimp)
       if (str.length !== this.subsimp.length) {
         // this.subsimp = this.subsimp.replace(/[\x00-\x1F\x7F-\x9F]/g, '')
         this.subsimp = this.subsimp.replace('\r', '')
@@ -112,7 +112,7 @@ export default {
         this.videoId = obj.vid
         this.$refs.youtube.player.getPlayerState().then((state) => {
           this.$refs.youtube.player.loadVideoById(this.videoId, obj.start)
-          console.log('player state :', state)
+          // console.log('player state :', state)
         })
       }
     },
@@ -173,18 +173,18 @@ export default {
     },
     vsearch (keyword, res) {
       res.forEach((item) => {
-        console.warn(item.id, item.data())
+        // console.warn(item.id, item.data())
         this.$fire.firestore.collection('-video_meta').doc(item.id).get().then((meta) => {
-          console.log(meta.data())
+          // console.log(meta.data())
           this.catItems = []
           for (const prop in item.data()) {
             const sub = item.data()[prop]
-            console.log(sub.sub)
+            // console.log(sub.sub)
             if (sub.sub.includes(keyword)) {
               const tag = sub.sub.split(keyword).join(`<span class="pink--text">${keyword}</span>`)
               this.catItems.push({ html: tag, vid: item.id, start: sub.start, sub: sub.sub })
             }
-            console.log(this.catItems)
+            // console.log(this.catItems)
           }
           this.videoCollection.push({ title: meta.data().title, entry: this.catItems })
           if (this.videoCollection.length === 0) {
@@ -197,7 +197,7 @@ export default {
       const firstChar = keyword.split('')[0]
       this.videoCollection = []
       const res = await this.$fire.firestore.collection(firstChar).get()
-      console.log(res.size)
+      // console.log(res.size)
       if (res.size > 0) {
         if (keyword.includes('x') || keyword.includes('X')) {
           this.gsearch(keyword, res)

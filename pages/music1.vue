@@ -14,14 +14,14 @@
             <v-text-field v-model="vid" label="video URL" @change="parseURL" />
             <v-card outlined>
               <v-card-actions>
-                <v-text-field v-model="lineCount" class="mr-2" label="lineCount" />
+                <v-text-field v-model="txtJSON" class="ml-2" label="JSON" />
+                <v-btn :disabled="videoCollection.length < 1" outlined small class="pink--text" @click="saveDoc">
+                  save coll
+                </v-btn>
+                <v-text-field v-model="lineCount" class="mx-2" label="lineCount" />
                 <v-btn outlined small dark class="info" @click="getCurrentTime">
                   get time
                 </v-btn>
-                <v-btn outlined small class="pink--text" @click="getJSON">
-                  get JSON
-                </v-btn>
-                <v-text-field v-model="txtJSON" class="ml-2" label="JSON" />
               </v-card-actions>
             </v-card>
             <v-textarea
@@ -79,7 +79,7 @@
             {{ indexCount }} characters indexed ...
           </material-alert>
           <v-btn :disabled="videoCollection.length==0 || vid==''" outlined class="pink--text" small @click="save_db">
-            save to DB
+            start indexing
           </v-btn>
           <v-card outlined>
             <v-card-actions>
@@ -96,13 +96,13 @@
             <v-card-actions>
               <v-text-field v-model="duration" label="duration" />
               <v-btn outlined small :disabled="duration==='' || title===''" @click="save_meta">
-                save video meta
+                save meta & doc
               </v-btn>
             </v-card-actions>
             <v-card-actions>
-              <v-text-field v-model="total_char" label="total_char" />
-              <v-text-field v-model="video_length" label="video_length" />
-              <v-btn outlined small :disabled="video_length==='' || total_char===''" @click="update_stats">
+              <v-text-field v-model="indexCount" label="+ indexCount" />
+              <v-text-field v-model="duration" label="+ duration" />
+              <v-btn outlined small :disabled="duration==='' || indexCount===''" @click="update_stats">
                 update stats
               </v-btn>
             </v-card-actions>
@@ -160,7 +160,7 @@ export default {
       vocab: '',
       videoId: 'qKTAf5hSyzY',
       repeatwords: [],
-      skipwords: ['、', '“', '”', '-', '_', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '哦', '喲', '呢', '啊', '呀', '呐', '唉', '哎', '了', '我', '', '，', '。', '！', '？', '《', '》', ',', '.', '?', ' ', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'],
+      skipwords: ['：', '、', '"', '\'', '-', '_', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '哦', '喲', '呢', '啊', '呀', '呐', '唉', '哎', '了', '我', ' ', '，', '。', '！', '？', '《', '》', ',', '.', '?', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'],
       playerVars: {
         autoplay: 0,
         controls: 1,
@@ -174,12 +174,7 @@ export default {
     }
   },
   mounted () {
-    this.$fire.firestore.collection('-video_stats').doc('stats_doc').get().then((doc) => {
-      console.log(doc.data())
-      this.stats_obj = doc.data()
-      this.unique_char = doc.data().unique_char
-      // total_char, unique_char [], video_count, video_length
-    }).catch((err) => { console.log(err.message) })
+    this.init()
   },
   methods: {
     getJSON () {
@@ -197,10 +192,10 @@ export default {
     update_stats () {
       // video_count +1, total_char, video_length, unique_char[]
       const vCount = this.stats_obj.video_count + 1
-      const tChar = this.stats_obj.total_char + Number(this.total_char)
+      const tChar = this.stats_obj.total_char + Number(this.indexCount)
       const vLength = this.stats_obj.video_length + Number(this.video_length)
       const obj = { video_count: vCount, total_char: tChar, video_length: vLength, unique_char: this.unique_char }
-      console.log(obj)
+      // console.log(obj)
       this.$fire.firestore.collection('-video_stats').doc('stats_doc').set(obj).then(() => {
         console.log('stats update success')
       }).catch((err) => { console.log(err.message) })
@@ -210,6 +205,7 @@ export default {
       this.$fire.firestore.collection('-video_meta').doc(this.videoId).set(obj).then(() => {
         console.log('meta saved success')
       }).catch((err) => { console.log(err.message) })
+      this.saveDoc()
     },
     save_db () {
       this.videoCollection.forEach((obj) => {
@@ -239,9 +235,11 @@ export default {
       }).catch((err) => { console.log(err.message) })
     },
     adjustTime (item, index) {
-      console.log(item)
+      // console.log(item)
       const time = item.id.split(':')
-      this.videoCollection[index].start = parseInt(time[0]) * 60 * 60 + parseInt(time[1]) * 60 + parseFloat(time[2].toFixed(3))
+      this.videoCollection[index].start = parseInt(time[0]) * 60 * 60 + parseInt(time[1]) * 60 + parseFloat(time[2])
+      // this.saveDoc()
+      this.getJSON()
     },
     playSegment (obj, i) {
       this.counter = i
@@ -251,7 +249,18 @@ export default {
     parseURL () {
       const temp = this.vid.split('&')
       this.videoId = temp[0].split('?v=')[1]
-      console.log(temp[0].split('?v=')[1])
+      // console.log(temp[0].split('?v=')[1])
+      this.readDoc()
+    },
+    async readDoc () {
+      const doc = await this.$fire.firestore.collection('-video_coll').doc(this.videoId).get()
+      if (doc.exists) {
+        this.videoCollection = doc.data().sub.filter(item => item.sub !== '')
+      }
+    },
+    async saveDoc () {
+      const res = await this.$fire.firestore.collection('-video_coll').doc(this.videoId).set({ sub: this.videoCollection })
+      console.warn(res)
     },
     parseText () {
       const lines = this.taVocab.split('\n')
@@ -259,6 +268,15 @@ export default {
         const obj = { id: '', sub: line, start: '' }
         this.videoCollection.push(obj)
       })
+    },
+    async init () {
+      const res = await this.$fire.firestore.collection('-video_stats').doc('stats_doc').get()
+      // console.log(res.data())
+      this.stats_obj = res.data()
+      this.total_char = res.data().total_char.toString()
+      this.unique_char = res.data().unique_char
+      this.video_count = res.data().video_count.toString()
+      this.video_length = (res.data().video_length / 60).toFixed(2).toString()
     }
   }
 }
